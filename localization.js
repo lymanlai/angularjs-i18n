@@ -1,22 +1,21 @@
 angular.module('localization', [])
-
 //  create our localization service
 .factory
 (
     'localize',
     [
-        '$http', '$rootScope', '$window',
-        function($http, $rootScope, $window)
-        {
+        '$http', '$rootScope', '$window', '$http',
+        function($http, $rootScope, $window, $http)
+        {            
             var localize =
             {
             //  use the $window service to get the language of the user's browser
-                language : $window.navigator.userLanguage || $window.navigator.language || 'en-US',
+                language : $http.defaults.headers.common.lang || $window.navigator.language || 'en-US',
 
             //  array to hold the localized resource string entries
                 dictionary : undefined,
 
-            //  flag to indicate if the service hs loaded the resource file
+            //  flag to indicate if the service has loaded the resource file
                 resourceFileLoaded : false,
 
                 successCallback : function (data)
@@ -31,8 +30,11 @@ angular.module('localization', [])
                     $rootScope.$broadcast('localizeResourcesUpdates');
                 },
 
-                initLocalizedResources : function ()
+                initLocalizedResources : function (lang)
                 {
+                    if (lang) {
+                        localize.language = lang;
+                    }
                    //  build the url to retrieve the localized resource file
                     var url = '/i18n/' + localize.language + '.json';
 
@@ -54,7 +56,7 @@ angular.module('localization', [])
                 },
 
                 getLocalizedString : function (value)
-                {
+                {                                                     
                 //  Contextualize missing translation
                     var translated = '!' + value + '!';
 
@@ -84,6 +86,7 @@ angular.module('localization', [])
                         {
                             var placeholders = placeholders || null;
                             var translated = localize.dictionary[value];
+
                             if (translated === undefined)
                             {
                                 if (log_untranslated == true)
@@ -92,6 +95,7 @@ angular.module('localization', [])
                                 }
                                 return sprintf(value, placeholders);
                             }
+
                             return sprintf(translated, placeholders);
                         };
 
@@ -126,14 +130,26 @@ angular.module('localization', [])
         'localize',
         function (localize)
         {
-            return function (input)
+            return function ()
             {
-                return localize.getLocalizedString(input);
+                return localize.getLocalizedString.apply(null, arguments);
             };
         }
     ]
 )
-
+.factory
+(
+    '__',
+    [
+        'localize',
+        function(localize)
+        {
+            return function(){
+                    return localize.getLocalizedString.apply(null, arguments);
+            }
+        }
+    ]
+)
 .directive
 (
     'i18n',
