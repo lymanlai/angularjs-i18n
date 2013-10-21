@@ -12,6 +12,7 @@ angular.module('localization', [])
             //  use the $window service to get the language of the user's browser
                 language : $http.defaults.headers.common.lang || $window.navigator.language || 'en-US',
 
+                type: [],
             //  array to hold the localized resource string entries
                 dictionary : undefined,
 
@@ -20,8 +21,13 @@ angular.module('localization', [])
 
                 successCallback : function (data)
                 {
-                //  store the returned array in the dictionary
-                    localize.dictionary = data;
+                    if (!localize.dictionary) {
+                        localize.dictionary = data;
+                    } else {
+                        for (key in data) {
+                            localize.dictionary[key] = data[key];
+                        }
+                    }
 
                 //  set the flag that the resource are loaded
                     localize.resourceFileLoaded = true;
@@ -29,14 +35,26 @@ angular.module('localization', [])
                 //  broadcast that the file has been loaded
                     $rootScope.$broadcast('localizeResourcesUpdates');
                 },
-
-                initLocalizedResources : function (lang)
+                reloadLocalizedResources : function(lang) {
+                    for (index in localize.type) {
+                        localize.initLocalizedResources(lang, localize.type[index]);
+                    }
+                },
+                initLocalizedResources : function (lang, _type)
                 {
+                    var type = 'share';
                     if (lang) {
                         localize.language = lang;
                     }
+                    if (_type) {
+                        type = _type;
+                    }
+
+                    if (-1 == localize.type.indexOf(type)) {
+                        localize.type.push(type);
+                    }
                    //  build the url to retrieve the localized resource file
-                    var url = '/i18n/' + localize.language + '.json';
+                    var url = '/i18n/' + type + '-' + localize.language + '.json';
 
                     //  request the resource file
                     $http({ method:"GET", url:url, cache:false })
@@ -46,7 +64,7 @@ angular.module('localization', [])
                         function ()
                         {
                             //  the request failed set the url to the default resource file
-                            var url = '/i18n/en-US.json';
+                            var url = '/i18n/' + type + '-en-US.json';
                             //  request the default resource file
                             $http({ method:"GET", url:url, cache:false })
                                 .success(localize.successCallback);
@@ -61,15 +79,15 @@ angular.module('localization', [])
                     var translated = '!' + value + '!';
 
                 //  check to see if the resource file has been loaded
-                    if (!localize.resourceFileLoaded)
-                    {
-                    //  call the init method
-                        localize.initLocalizedResources();
-                    //  set the flag to keep from looping in init
-                        localize.resourceFileLoaded = true;
-                    //  return the empty string
-                        return translated;
-                    }
+                    // if (!localize.resourceFileLoaded)
+                    // {
+                    // //  call the init method
+                    //     localize.initLocalizedResources();
+                    // //  set the flag to keep from looping in init
+                    //     localize.resourceFileLoaded = true;
+                    // //  return the empty string
+                    //     return translated;
+                    // }
 
                 //  make sure the dictionary has valid data
                     if ( typeof localize.dictionary === "object" )
